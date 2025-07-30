@@ -14,3 +14,22 @@ It just loops forever (with sleeps of course), while reading `/proc/asound/card0
 State is on, when `state: RUNNING` in found in `status`.
 
 The rc5 package can create and send signals for both wired and IR signals.
+
+Install as follows on LibreElec
+
+```
+cat <<EOF > /storage/.config/system.d/remotepi.service
+[Unit]
+Description=Start RemotePi Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/storage/.kodi/remotepi
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
