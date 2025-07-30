@@ -31,9 +31,11 @@ func main() {
 	defer rpio.Close()
 
 	// Currently only supports pin 17
-	pin := rpio.Pin(17)
+	pin := rpio.Pin(13)
 	defer pin.Low()
 
+    //defer pin.Input()
+    //defer pin.PullOff()
 	// Create a couple of amplifier rc commands
 	// onOff := rc5Command(16, 12, 0)
 	// volumeUp := rc5Command(16, 16, 0)
@@ -50,7 +52,7 @@ func main() {
 	offDeleay := 2 * time.Minute
 
 	// Find all audio card status files (hopefully only 1)
-	statusFiles, err := filepath.Glob("/proc/asound/card0/pcm*/sub*/status")
+	statusFiles, err := filepath.Glob("/proc/asound/card2/pcm*/sub*/status")
 	exitOnErr(err)
 
 	// if len(matches) != 1 {
