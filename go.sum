@@ -1,4 +1,10 @@
+github.com/eclipse/paho.mqtt.golang v1.4.3 h1:vsNAQUbz4DvaHIAwbWYw8tNxDT//W8i1EcPbCWDqfhw=
+github.com/eclipse/paho.mqtt.golang v1.4.3/go.mod h1:2L1Ck1AWlDngW7qD2qR3gB3f1EJK9cU2wVVBFA6pBjU=
+github.com/gorilla/websocket v1.4.2 h1:+/TMKTY5tAC3Hp7FQ4CYAqnQNYv1ltA8WTBeEvYh1Aw=
+github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580vteu43sZbJkCvGUYcY3fQM0V7hVt0S1KpKTY=
 github.com/morphar/powernap v0.0.0-20220327212811-a474b0d0fece h1:SgHLdz5+syLIK9UWTpIwvUt8ORdfjgL6yvM0xtQKn8I=
 github.com/morphar/powernap v0.0.0-20220327212811-a474b0d0fece/go.mod h1:NvQG5haYRWNiO2KNSDvos4Jmxzb5M4KVYQ7u31okoUk=
 github.com/stianeikeland/go-rpio/v4 v4.6.0 h1:eAJgtw3jTtvn/CqwbC82ntcS+dtzUTgo5qlZKe677EY=
 github.com/stianeikeland/go-rpio/v4 v4.6.0/go.mod h1:A3GvHxC1Om5zaId+HqB3HKqx4K/AqeckxB7qRjxMK7o=
+golang.org/x/sync v0.0.0-20210220032951-036812b2e83c h1:5KupFs3Ge+LeN+JYJ5yZdO4cfFf4CJ4gKVrPF1UfNQ0=
+golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxmzwP+sz8vvrUPD4exu1j1IrS4NJfdE1F9R6j1FhYs=

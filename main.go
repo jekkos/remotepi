@@ -3,10 +3,15 @@ package main
 import (
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
+	"syscall"
 	"time"
 
+	"github.com/morphar/remotepi/pkg/config"
+	"github.com/morphar/remotepi/pkg/led"
+	"github.com/morphar/remotepi/pkg/mqtt"
 	"github.com/morphar/remotepi/pkg/rc5"
 	"github.com/stianeikeland/go-rpio/v4"
 )
@@ -15,92 +20,82 @@ func init() {
 	log.SetFlags(log.Ltime | log.Lshortfile)
 }
 
-// $ cat /proc/asound/card0/pcm*/sub*/status
-// closed
-
-// $ cat /proc/asound/card0/pcm*/sub*/status
-// state: RUNNING
-
-// The regexp for matching ON state of the audio stream
 var reRunning = regexp.MustCompile("state: RUNNING")
 
 func main() {
-	// Open pin with the remote control rca connected
+	cfg := config.Load()
+
 	err := rpio.Open()
 	exitOnErr(err)
 	defer rpio.Close()
 
-	// Currently only supports pin 17
-	pin := rpio.Pin(13)
-	defer pin.Low()
+	marantzPin := rpio.Pin(cfg.MarantzPin)
+	defer marantzPin.Low()
 
-    //defer pin.Input()
-    //defer pin.PullOff()
-	// Create a couple of amplifier rc commands
-	// onOff := rc5Command(16, 12, 0)
-	// volumeUp := rc5Command(16, 16, 0)
-	// volumeDown := rc5Command(16, 17, 0)
+	ledPin := rpio.Pin(cfg.LEDPin)
+	defer ledPin.Low()
+
 	turnOn := rc5.CommandX(16, 12, 1, 0)
 	turnOff := rc5.CommandX(16, 12, 2, 0)
-	// directVolume := rc5xCommand(16, 111, 10, 0)
 
-	// onOff := 0b11010000001100
-	// turnOff := 0b1101000000001100000010
-	// sendSignal(pin, uint(onOff), true)
+	offDelay := cfg.OffDelay
 
-	// Delays before turning on or off the amplifier
-	offDeleay := 2 * time.Minute
-
-	// Find all audio card status files (hopefully only 1)
-	statusFiles, err := filepath.Glob("/proc/asound/card2/pcm*/sub*/status")
+	statusFiles, err := filepath.Glob("/proc/asound/" + cfg.AudioCard + "/pcm*/sub*/status")
 	exitOnErr(err)
 
-	// if len(matches) != 1 {
-	// 	log.Fatal("For now, this only works with 1 audio card")
-	// }
-
-	// statusFile := matches[0]
-
-	// Setup the check vars
 	var lastOn time.Time
 	var stateOn bool
 
+	ledController := led.NewController(ledPin)
+
+	mqttClient := mqtt.NewClient(cfg, ledController)
+	err = mqttClient.Connect()
+	exitOnErr(err)
+	defer mqttClient.Disconnect()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	for {
-		// Find the current state - more specifically: is any cards running?
-		curStateOn := false
-		for _, statusFile := range statusFiles {
-			src, err := os.ReadFile(statusFile)
-			exitOnErr(err)
-			if reRunning.Match(src) {
-				curStateOn = true
-				break
+		select {
+		case <-sigChan:
+			log.Println("Shutting down...")
+			return
+
+		case <-ticker.C:
+			curStateOn := false
+			for _, statusFile := range statusFiles {
+				src, err := os.ReadFile(statusFile)
+				exitOnErr(err)
+				if reRunning.Match(src) {
+					curStateOn = true
+					break
+				}
+			}
+
+			if curStateOn {
+				lastOn = time.Now()
+			}
+
+			if curStateOn && !stateOn {
+				stateOn = true
+				rc5.Send(marantzPin, turnOn, true)
+				time.Sleep(time.Second)
+				marantzPin.Input()
+				marantzPin.PullOff()
+				continue
+			}
+
+			if !curStateOn && stateOn && time.Since(lastOn) > offDelay {
+				stateOn = false
+				rc5.Send(marantzPin, turnOff, true)
+				marantzPin.Input()
+				marantzPin.PullOff()
 			}
 		}
-
-		// cur state is on, update the lastOn timestamp
-		if curStateOn {
-			lastOn = time.Now()
-		}
-
-		// If any card is running and the state is not on: send the ON signal
-		if curStateOn && !stateOn {
-			stateOn = true
-			rc5.Send(pin, turnOn, true)
-			time.Sleep(time.Second)
-			pin.Input()
-			pin.PullOff()
-			continue
-		}
-
-		// If the current state is off and the off delay has passed since last on: send the OFF signal
-		if !curStateOn && stateOn && time.Since(lastOn) > offDeleay {
-			stateOn = false
-			rc5.Send(pin, turnOff, true)
-			pin.Input()
-			pin.PullOff()
-		}
-
-		time.Sleep(time.Second)
 	}
 }
 
